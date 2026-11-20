@@ -806,6 +806,7 @@ $("dropQueue").onclick=()=>{
 $("connForm").addEventListener("submit", async e=>{
   e.preventDefault();
   const url=$("cUrl").value.trim(), token=$("cTok").value.trim();
+  if (!url){ $("connErr").textContent="Primero pega la URL de tu Apps Script (Implementar › Gestionar implementaciones › copiar la URL de la aplicación web)."; return; }
   if (!/^https:\/\/script\.google(usercontent)?\.com\/.+\/exec$/.test(url)){ $("connErr").textContent="La URL debe empezar por https://script.google.com/ y acabar en /exec."; return; }
   if (!token){ $("connErr").textContent="Pega la clave (pestaña Config, celda B2)."; return; }
   $("connErr").textContent=""; $("connBtn").disabled=true; $("connBtn").textContent="Comprobando…";
