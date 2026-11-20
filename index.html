@@ -266,6 +266,29 @@ details>summary{cursor:pointer;font-weight:600;color:var(--accent);font-size:14p
 .welcome{max-width:520px;margin:0 auto;padding:calc(28px + var(--safe-t)) 18px 40px;display:flex;flex-direction:column;gap:16px}
 .welcome h1{font-size:28px;color:var(--ink)}
 .welcome ol{margin:0;padding-left:20px;color:var(--ink-2);font-size:14px;display:flex;flex-direction:column;gap:6px}
+/* Escáner de tickets */
+.scanbtn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:52px;border-radius:12px;border:1.5px dashed var(--accent);background:var(--accent-soft);color:var(--accent-2);font-weight:700;font-size:15px;cursor:pointer}
+.scanbtn:hover{filter:brightness(.98)}
+.scanbusy{display:flex;flex-direction:column;align-items:center;gap:14px;padding:30px 10px;text-align:center;color:var(--ink-2)}
+.spinner{width:42px;height:42px;border-radius:50%;border:4px solid var(--accent-soft);border-top-color:var(--accent);animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.scanhead{display:grid;grid-template-columns:72px minmax(0,1fr);gap:12px;align-items:start}
+.scanthumb{width:72px;height:96px;border-radius:8px;object-fit:cover;background:var(--surface-2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--muted)}
+.lines{display:flex;flex-direction:column;gap:8px}
+.line{display:grid;grid-template-columns:minmax(0,1fr) 92px;gap:6px 8px;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--surface)}
+.line.pend{border-color:var(--warn-fill);background:var(--warn-bg)}
+.line.auto{border-style:dashed}
+.line input,.line select{height:38px;border:1px solid var(--line-strong);border-radius:8px;background:var(--surface);padding:0 8px;width:100%;font-size:15px}
+.line .imp{text-align:right;font-variant-numeric:tabular-nums}
+.line select{grid-column:1/-1}
+.line .tagp{grid-column:1/-1;font-size:12px;font-weight:600;color:var(--warn);display:flex;justify-content:space-between;gap:8px;align-items:center}
+.line .tagp button{border:0;background:transparent;color:var(--accent-2);font-weight:700;cursor:pointer;font-size:12px;padding:0}
+.split{display:flex;flex-wrap:wrap;gap:6px}
+.split span{font-size:12.5px;padding:3px 9px;border-radius:999px;background:var(--surface-2);font-variant-numeric:tabular-nums}
+.split span.p{background:var(--warn-bg);color:var(--warn);font-weight:600}
+.dup{font-size:13px;padding:10px 12px;border-radius:10px;background:var(--bad-bg);color:var(--bad)}
+.dup.soft{background:var(--warn-bg);color:var(--warn)}
+.ticketlink{display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--accent-2);font-weight:600;text-decoration:none}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -504,7 +527,7 @@ details>summary{cursor:pointer;font-weight:600;color:var(--accent);font-size:14p
           <button class="btn small danger" id="dropQueue" hidden>Descartar cambios sin enviar</button>
         </div>
       </section>
-      <p class="help" style="text-align:center">Mis gastos · v2.0</p>
+      <p class="help" style="text-align:center">Mis gastos · v3.0</p>
     </section>
   </main>
 
@@ -523,6 +546,8 @@ details>summary{cursor:pointer;font-weight:600;color:var(--accent);font-size:14p
     <div class="grab"></div>
     <h2><span id="addH">Nuevo movimiento</span><button class="icon" data-close aria-label="Cerrar">✕</button></h2>
     <form id="addForm" novalidate>
+      <button type="button" class="scanbtn" id="scanBtn">📷 Escanear ticket o factura</button>
+      <input type="file" id="scanFile" accept="image/*,application/pdf" hidden>
       <div class="seg type" id="fTipoAdd"><button type="button" data-v="gasto" aria-pressed="true">Gasto</button><button type="button" data-v="ingreso" aria-pressed="false">Ingreso</button></div>
       <div class="field amount"><label for="fImporte">Importe</label><div class="in"><input id="fImporte" inputmode="decimal" autocomplete="off" placeholder="0,00"><span aria-hidden="true">€</span></div></div>
       <div class="field"><label for="fDesc">Nombre del gasto</label><input id="fDesc" autocomplete="off" placeholder="Ej.: Mercadona, gasolina, Netflix…" list="descList"><datalist id="descList"></datalist><div class="hint" id="autoHint"></div></div>
@@ -534,6 +559,7 @@ details>summary{cursor:pointer;font-weight:600;color:var(--accent);font-size:14p
       </div>
       <div id="personaWrap" hidden><label id="perLbl">Quién (opcional)</label><div class="chips" id="fPersonas" role="group" aria-labelledby="perLbl"></div></div>
       <div class="field"><label for="fNotas">Notas (opcional)</label><textarea id="fNotas" placeholder="Detalles, número de factura…"></textarea></div>
+      <a class="ticketlink" id="fTicket" href="#" target="_blank" rel="noopener" hidden>🧾 Ver ticket guardado en Drive</a>
       <p class="err" id="addErr" role="alert"></p>
       <div class="btnrow" style="justify-content:space-between">
         <button type="button" class="btn danger" id="fDel" hidden>Borrar</button>
@@ -619,6 +645,47 @@ details>summary{cursor:pointer;font-weight:600;color:var(--accent);font-size:14p
   </div>
 </div>
 
+<!-- Hoja: ticket escaneado -->
+<div class="overlay" id="scanOv" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="scanH">
+    <div class="grab"></div>
+    <h2><span id="scanH">Revisar ticket</span><button class="icon" data-close aria-label="Cerrar">✕</button></h2>
+    <div class="scanbusy" id="scanBusy"><div class="spinner"></div><b id="scanBusyT">Leyendo el ticket…</b><span class="help">Suele tardar entre 5 y 20 segundos.</span></div>
+    <div id="scanErrBox" hidden><p class="dup" id="scanErrT"></p><div class="btnrow" style="margin-top:12px"><button class="btn" data-close>Cerrar</button><button class="btn primary" id="scanRetry" style="flex:1">Probar con otra foto</button></div></div>
+    <form id="scanForm" novalidate hidden>
+      <div class="scanhead">
+        <a id="scanThumbA" href="#" target="_blank" rel="noopener"><img class="scanthumb" id="scanThumb" alt="Ticket"></a>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="field"><label for="sComercio">Establecimiento</label><input id="sComercio" autocomplete="off"></div>
+          <div class="row2">
+            <div class="field"><label for="sFecha">Fecha</label><input id="sFecha" type="date"></div>
+            <div class="field"><label for="sTotal">Total (€)</label><input id="sTotal" inputmode="decimal" style="font-weight:700;font-variant-numeric:tabular-nums"></div>
+          </div>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field"><label for="sPago">Pago</label><select id="sPago"></select></div>
+        <div class="field" id="sPersonaF"><label for="sPersona">Quién</label><select id="sPersona"></select></div>
+      </div>
+      <div id="scanDup"></div>
+      <div id="scanAvisos"></div>
+      <div class="seg" id="sMode"><button type="button" data-v="split" aria-pressed="true">Repartir por categorías</button><button type="button" data-v="single" aria-pressed="false">Un solo gasto</button></div>
+      <div id="sSingle" hidden><div class="field"><label for="sSingleCat">Categoría del gasto</label><select id="sSingleCat"></select></div></div>
+      <div id="sSplit">
+        <div class="split" id="sSummary" style="margin-bottom:10px"></div>
+        <div id="sPendBar" class="btnrow" style="align-items:center;margin-bottom:10px" hidden>
+          <span class="help" style="flex:1">Asignar todas las pendientes a:</span>
+          <select id="sPendAll" style="height:36px;border:1px solid var(--line-strong);border-radius:8px;background:var(--surface);padding:0 8px"></select>
+        </div>
+        <div class="lines" id="sLines"></div>
+        <button type="button" class="btn small" id="sAddLine" style="margin-top:8px">+ Añadir línea</button>
+      </div>
+      <p class="err" id="scanErr" role="alert"></p>
+      <button class="btn primary" type="submit" id="scanSave">Guardar</button>
+    </form>
+  </div>
+</div>
+
 <div class="toast" id="toast" hidden><span id="toastMsg"></span><button id="toastUndo">Deshacer</button></div>
 
 <script>
@@ -686,7 +753,7 @@ const clone = o => JSON.parse(JSON.stringify(o));
 
 /* ================= Estado ================= */
 const EMPTY = {version:2, gastos:[], config:{presupuesto:0,saldoInicial:0,ahorroMensual:0,personas:[],fijos:[]}, cats:[], objetivos:[]};
-const fix = d => { d = {...clone(EMPTY), ...(d||{})}; d.config = {...EMPTY.config, ...(d.config||{})}; d.cats ||= []; d.objetivos ||= []; d.gastos.forEach(g=>{ g.tipo ||= "gasto"; }); return d; };
+const fix = d => { d = {...clone(EMPTY), ...(d||{})}; d.config = {...EMPTY.config, ...(d.config||{})}; d.cats ||= []; d.objetivos ||= []; d.gastos.forEach(g=>{ g.tipo ||= "gasto"; g.ticket ||= ""; g.ticketId ||= ""; }); return d; };
 let conn = LS.get("mg-conn", null);
 let server = fix(LS.get("mg-cache", null));
 let queue = LS.get("mg-queue", []);
@@ -903,7 +970,8 @@ function openAdd(item, preset){
   ui.editing=item?item.id:null; ui.catManual=!!item;
   ui.tipoAdd=item?item.tipo:(preset&&preset.tipo)||"gasto"; segSet($("fTipoAdd"),ui.tipoAdd); setAddLabels();
   $("addH").textContent=item?(item.tipo==="ingreso"?"Editar ingreso":"Editar gasto"):"Nuevo movimiento";
-  $("fDel").hidden=!item;
+  $("fDel").hidden=!item; $("scanBtn").hidden=!!item;
+  $("fTicket").hidden=!(item&&item.ticket); if(item&&item.ticket) $("fTicket").href=item.ticket;
   $("fImporte").value=item?String(item.importe).replace(".",","):"";
   $("fDesc").value=item?item.desc||"":"";
   $("fNotas").value=item?item.notas||"":"";
@@ -1133,8 +1201,8 @@ $("applyFijos").onclick=()=>{
 /* ================= CSV ================= */
 function csvOf(list){
   const q=s=>`"${String(s??"").replace(/"/g,'""')}"`;
-  const rows=[...list].sort((a,b)=>a.fecha.localeCompare(b.fecha)).map(i=>[i.fecha,q(i.desc),q(i.cat),q(i.pago),String(i.importe).replace(".",","),i.tipo,q(i.persona),q(i.notas),q(i.sub),i.fijoId?"sí":"no"].join(";"));
-  return "﻿"+["Fecha;Concepto;Categoría;Pago;Importe;Tipo;Persona;Notas;Subcategoría;Fijo",...rows].join("\n");
+  const rows=[...list].sort((a,b)=>a.fecha.localeCompare(b.fecha)).map(i=>[i.fecha,q(i.desc),q(i.cat),q(i.pago),String(i.importe).replace(".",","),i.tipo,q(i.persona),q(i.notas),q(i.sub),i.fijoId?"sí":"no",q(i.ticket)].join(";"));
+  return "﻿"+["Fecha;Concepto;Categoría;Pago;Importe;Tipo;Persona;Notas;Subcategoría;Fijo;Ticket",...rows].join("\n");
 }
 async function exportCsv(list,name){
   const blob=new Blob([csvOf(list)],{type:"text/csv;charset=utf-8"}); const file=new File([blob],name,{type:"text/csv"});
@@ -1167,6 +1235,169 @@ $("impForm").addEventListener("submit",e=>{ e.preventDefault();
   try{ const items=parseCsv($("impText").value); if(!items.length){ $("impErr").textContent="No hay filas para importar."; return; }
     $("impErr").textContent=""; commit({action:"add",items}); $("impText").value=""; $("impFile").value=""; toast(`${items.length} movimiento${items.length>1?"s":""} importado${items.length>1?"s":""}`);
   }catch(err){ $("impErr").textContent=err.message; } });
+
+/* ================= Escáner de tickets ================= */
+let scan=null, scanLocalUrl=null;
+$("scanBtn").onclick=()=>{
+  if (!conn || conn.local){ toast("Para escanear tickets conecta la app con vuestra Google Sheet (Ajustes)."); return; }
+  if (!navigator.onLine){ toast("Sin conexión: el escaneo necesita internet."); return; }
+  if ((server.version||0)<3){ toast("Actualiza el script de la hoja a la versión 3 para escanear tickets."); return; }
+  $("scanFile").value=""; $("scanFile").click();
+};
+$("scanRetry").onclick=()=>{ closeOv("scanOv"); $("scanFile").value=""; $("scanFile").click(); };
+$("scanFile").addEventListener("change",async e=>{
+  const file=e.target.files[0]; if(!file) return;
+  closeOv("addOv");
+  $("scanBusy").hidden=false; $("scanErrBox").hidden=true; $("scanForm").hidden=true; $("scanBusyT").textContent="Preparando la imagen…"; $("scanH").textContent="Leer ticket";
+  openOv("scanOv");
+  try{
+    const prep=await prepFile(file);
+    if (scanLocalUrl) URL.revokeObjectURL(scanLocalUrl);
+    scanLocalUrl = prep.mime.startsWith("image/") ? URL.createObjectURL(prep.blob) : null;
+    $("scanBusyT").textContent="Leyendo el ticket con IA…";
+    const res=await apiScan({mime:prep.mime, data:prep.b64, name:file.name});
+    startReview(res, prep.hash);
+  }catch(err){
+    $("scanBusy").hidden=true; $("scanErrBox").hidden=false;
+    $("scanErrT").textContent = err.kind==="net" ? "No se pudo conectar con la hoja. Revisa la conexión y vuelve a intentarlo." : (err.msg||err.message||"No se pudo leer el ticket.");
+  }
+});
+async function prepFile(file){
+  const buf=await file.arrayBuffer();
+  let hash="";
+  try{ const d=await crypto.subtle.digest("SHA-256",buf); hash=[...new Uint8Array(d)].slice(0,12).map(b=>b.toString(16).padStart(2,"0")).join(""); }catch(e){ hash=String(file.size)+"-"+file.lastModified; }
+  const isPdf=file.type==="application/pdf"||/\.pdf$/i.test(file.name);
+  if (isPdf){ if(file.size>8e6) throw new Error("El PDF es demasiado grande (máx. 8 MB)."); return {mime:"application/pdf", b64:await toB64(new Blob([buf])), blob:file, hash}; }
+  try{
+    const bmp=await createImageBitmap(file);
+    const max=1800, k=Math.min(1,max/Math.max(bmp.width,bmp.height));
+    const cv=document.createElement("canvas"); cv.width=Math.round(bmp.width*k); cv.height=Math.round(bmp.height*k);
+    cv.getContext("2d").drawImage(bmp,0,0,cv.width,cv.height);
+    const blob=await new Promise(r=>cv.toBlob(r,"image/jpeg",0.85));
+    return {mime:"image/jpeg", b64:await toB64(blob), blob, hash};
+  }catch(e){
+    if (file.size>8e6) throw new Error("La imagen es demasiado grande. Prueba con otra foto.");
+    return {mime:file.type||"image/jpeg", b64:await toB64(file), blob:file, hash};
+  }
+}
+function toB64(blob){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(String(r.result).split(",")[1]); r.onerror=rej; r.readAsDataURL(blob); }); }
+async function apiScan(file){
+  const ctl=new AbortController(); const t=setTimeout(()=>ctl.abort(),120000);
+  const catsPayload=parents("gasto").map(c=>({nombre:c.nombre, subs:subsOf(c.id).map(s=>s.nombre)}));
+  try{
+    const res=await fetch(conn.url,{method:"POST",body:JSON.stringify({action:"scan",token:conn.token,file,cats:catsPayload}),headers:{"Content-Type":"text/plain;charset=utf-8"},signal:ctl.signal,redirect:"follow"});
+    const txt=await res.text(); let j;
+    try{ j=JSON.parse(txt); }catch(e){ throw {kind:"server",msg:"La hoja no ha devuelto una respuesta válida. Comprueba que el script es la versión 3 y que creaste una nueva versión de la implementación."}; }
+    if (!j.ok) throw {kind:"server",msg:j.error||"Error al leer el ticket"};
+    if (!j.data||!j.data.scan) throw {kind:"server",msg:"El script de la hoja no es la versión 3. Actualízalo para escanear tickets."};
+    return j.data;
+  }catch(e){ if(e&&e.kind) throw e; if(e&&e.name==="AbortError") throw {kind:"server",msg:"La lectura ha tardado demasiado. Prueba de nuevo."}; throw {kind:"net",msg:"Sin conexión"}; }
+  finally{ clearTimeout(t); }
+}
+fillSelect($("sPago"),PAGOS,"—");
+function catOptions(sel, pendLabel){ return `<option value="">${esc(pendLabel||"— Elegir categoría —")}</option>`+parents("gasto").map(c=>`<option value="${esc(c.nombre)}" ${c.nombre===sel?"selected":""}>${esc(c.emoji)} ${esc(c.nombre)}</option>`).join(""); }
+function startReview(res, hash){
+  const r=res.scan;
+  const lines=(r.lineas||[]).map(l=>({desc:l.descripcion, importe:l.importe, cat:l.seguro?l.categoria:"", sugg:l.seguro?"":(l.categoria||((classify(l.descripcion,"gasto")||{}).cat)||""), sub:l.subcategoria||"", auto:false}));
+  const general = r.categoria_general || ((classify(r.comercio||"","gasto")||{}).cat) || "";
+  if (!lines.length && r.total) lines.push({desc:r.comercio||"Total", importe:r.total, cat:"", sugg:general, sub:"", auto:false});
+  scan={hash, ticket:res.ticket, lines, mode:"split", avisos:r.avisos||[], general, force:false};
+  $("sComercio").value=r.comercio||""; $("sFecha").value=r.fecha||todayStr(); $("sTotal").value=r.total!=null?(+r.total).toFixed(2).replace(".",","):"";
+  $("sPago").value=r.pago||""; 
+  fillSelect($("sPersona"),data.config.personas,"—"); $("sPersona").value=ui.me||""; $("sPersonaF").hidden=!data.config.personas.length;
+  $("scanThumb").hidden=false;
+  if (scanLocalUrl){ $("scanThumb").src=scanLocalUrl; } else { $("scanThumb").removeAttribute("src"); $("scanThumb").alt="PDF"; }
+  $("scanThumbA").href=res.ticket.url;
+  $("sSingleCat").innerHTML=catOptions(general);
+  // Si solo hay una categoría posible, proponer un solo gasto
+  const cs=new Set(lines.map(l=>l.cat||l.sugg).filter(Boolean));
+  scan.mode = lines.length<=1 || (cs.size<=1 && r.tipo_documento!=="ticket") ? "single" : "split";
+  if (scan.mode==="single" && !general && cs.size===1) $("sSingleCat").innerHTML=catOptions([...cs][0]);
+  $("scanAvisos").innerHTML=scan.avisos.length?`<p class="dup soft">ℹ️ ${scan.avisos.map(esc).join(" · ")}</p>`:"";
+  $("scanBusy").hidden=true; $("scanForm").hidden=false; $("scanH").textContent=r.tipo_documento==="factura"?"Revisar factura":"Revisar ticket"; $("scanErr").textContent="";
+  renderReview();
+}
+function syncAutoLine(){
+  const total=parseAmt($("sTotal").value);
+  const prev=scan.lines.find(l=>l.auto);
+  scan.lines=scan.lines.filter(l=>!l.auto);
+  if (!isNaN(total)){ const diff=r2(total-scan.lines.reduce((s,l)=>s+(+l.importe||0),0)); if(Math.abs(diff)>=0.01) scan.lines.push({desc:diff<0?"Descuento o ajuste":"Sin detallar en el ticket", importe:diff, cat:prev?prev.cat:"", sugg:scan.general||"", sub:"", auto:true}); }
+}
+function renderReview(){
+  segSet($("sMode"),scan.mode); $("sSingle").hidden=scan.mode!=="single"; $("sSplit").hidden=scan.mode!=="split";
+  syncAutoLine();
+  // Duplicados
+  const total=parseAmt($("sTotal").value), fecha=$("sFecha").value, com=norm($("sComercio").value);
+  const exact=data.gastos.filter(g=>g.ticketId&&g.ticketId===scan.hash);
+  const byGroup={}; data.gastos.filter(g=>g.fecha===fecha&&isOut(g)).forEach(g=>{ const k=norm(g.desc); byGroup[k]=(byGroup[k]||0)+g.importe; });
+  const soft=data.gastos.filter(g=>isOut(g)&&g.fecha===fecha&&((com&&norm(g.desc)===com)||(!isNaN(total)&&Math.abs(g.importe-total)<0.01)));
+  let dupHtml="";
+  if (exact.length) dupHtml=`<p class="dup">⛔ Este ticket ya está registrado (${exact.length} movimiento${exact.length>1?"s":""} del ${esc(exact[0].fecha)}). <label class="chk" style="margin-top:6px;color:inherit"><input type="checkbox" id="sForce" ${scan.force?"checked":""}> Guardarlo otra vez de todos modos</label></p>`;
+  else if (soft.length) dupHtml=`<p class="dup soft">⚠️ Ya hay ${soft.length===1?"un gasto parecido":"gastos parecidos"} ese día: ${soft.slice(0,3).map(g=>`${esc(g.desc||g.cat)} ${eur.format(g.importe)}`).join(", ")}. Comprueba que no lo estás duplicando.</p>`;
+  $("scanDup").innerHTML=dupHtml;
+  const f=$("sForce"); if(f) f.onchange=()=>{ scan.force=f.checked; updateSave(); };
+  if (scan.mode==="split"){
+    $("sLines").innerHTML=scan.lines.map((l,i)=>{ const pend=!l.cat; return `<div class="line ${pend?"pend":""} ${l.auto?"auto":""}" data-i="${i}">
+      <input data-f="desc" value="${esc(l.desc)}" aria-label="Producto" ${l.auto?"readonly":""}>
+      <input data-f="importe" class="imp" inputmode="decimal" value="${(+l.importe||0).toFixed(2).replace(".",",")}" aria-label="Importe" ${l.auto?"readonly":""}>
+      ${pend?`<span class="tagp"><span>⚠️ Pendiente de revisar</span>${l.sugg?`<button type="button" data-use="${i}">Usar sugerencia: ${esc(l.sugg)}</button>`:""}</span>`:""}
+      <select data-f="cat" aria-label="Categoría">${catOptions(l.cat)}</select></div>`; }).join("");
+    const pendN=scan.lines.filter(l=>!l.cat).length;
+    $("sPendBar").hidden=pendN<2; $("sPendAll").innerHTML=catOptions("","Elegir…");
+    renderSplitSummary();
+  }
+  updateSave();
+}
+function renderSplitSummary(){
+  const g={}; let pend=0; scan.lines.forEach(l=>{ if(!l.cat) pend+=+l.importe||0; else g[l.cat]=(g[l.cat]||0)+(+l.importe||0); });
+  $("sSummary").innerHTML=Object.entries(g).sort((a,b)=>b[1]-a[1]).map(([c,v])=>`<span>${esc(emojiOf(c))} ${esc(c)}: <b>${eur.format(v)}</b></span>`).join("")+(Math.abs(pend)>=0.005?`<span class="p">Pendiente: ${eur.format(pend)}</span>`:"");
+}
+function scanProblem(){
+  const total=parseAmt($("sTotal").value);
+  if (!(total>0)) return "Escribe el total del ticket.";
+  if (!$("sFecha").value) return "Elige la fecha.";
+  if (scan.lines.length && scan.lines.some(l=>isNaN(parseAmt(String(l.importe))))) return "Hay un importe de línea no válido.";
+  const exact=data.gastos.some(g=>g.ticketId&&g.ticketId===scan.hash); if(exact&&!scan.force) return "Este ticket ya está registrado.";
+  if (scan.mode==="single") return $("sSingleCat").value?"":"Elige la categoría del gasto.";
+  const pend=scan.lines.filter(l=>!l.cat).length; if(pend) return `${pend>1?"Quedan":"Queda"} ${pend} línea${pend>1?"s":""} pendiente${pend>1?"s":""} de revisar: elige su categoría.`;
+  const g={}; scan.lines.forEach(l=>g[l.cat]=(g[l.cat]||0)+(+l.importe||0));
+  const neg=Object.entries(g).find(([c,v])=>v<=0); if(neg) return `${neg[0]} queda en ${eur.format(neg[1])}: asigna el descuento a otra categoría.`;
+  return "";
+}
+function updateSave(){ const p=scanProblem(); $("scanSave").disabled=!!p; $("scanErr").textContent=p; $("scanErr").style.color=p?"var(--warn)":""; }
+$("sMode").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return; scan.mode=b.dataset.v;
+  if (scan.mode==="single" && !$("sSingleCat").value){ const g={}; scan.lines.forEach(l=>{ const c=l.cat||l.sugg; if(c) g[c]=(g[c]||0)+(+l.importe||0); }); const top=Object.entries(g).sort((a,b)=>b[1]-a[1])[0]; $("sSingleCat").innerHTML=catOptions(scan.general||(top?top[0]:"")); }
+  renderReview(); });
+$("sSingleCat").addEventListener("change",updateSave);
+["sTotal","sFecha","sComercio"].forEach(id=>$(id).addEventListener("change",renderReview));
+$("sTotal").addEventListener("input",()=>{ if(scan.mode==="split"){ syncAutoLine(); renderReview(); } else updateSave(); });
+$("sLines").addEventListener("change",e=>{
+  const row=e.target.closest(".line"); if(!row) return; const l=scan.lines[+row.dataset.i]; const f=e.target.dataset.f;
+  if (f==="cat"){ l.cat=e.target.value; if(l.cat) l.sub=""; }
+  else if (f==="importe"){ const v=parseAmt(e.target.value); if(!isNaN(v)) l.importe=v; }
+  else if (f==="desc") l.desc=e.target.value;
+  renderReview();
+});
+$("sLines").addEventListener("click",e=>{ const b=e.target.closest("[data-use]"); if(!b) return; const l=scan.lines[+b.dataset.use]; l.cat=l.sugg; renderReview(); });
+$("sPendAll").addEventListener("change",e=>{ const v=e.target.value; if(!v) return; scan.lines.forEach(l=>{ if(!l.cat) l.cat=v; }); renderReview(); });
+$("sAddLine").onclick=()=>{ scan.lines=scan.lines.filter(l=>!l.auto); scan.lines.push({desc:"",importe:0,cat:"",sugg:"",sub:"",auto:false}); renderReview(); const rows=$("sLines").querySelectorAll(".line"); const last=rows[rows.length-2]||rows[rows.length-1]; if(last) last.querySelector("input").focus(); };
+$("scanForm").addEventListener("submit",e=>{
+  e.preventDefault(); const p=scanProblem(); if(p){ updateSave(); return; }
+  const total=parseAmt($("sTotal").value), fecha=$("sFecha").value, comercio=$("sComercio").value.trim()||"Ticket";
+  const base={tipo:"gasto", fecha, desc:comercio, pago:$("sPago").value, persona:$("sPersona").value, ticket:scan.ticket.url, ticketId:scan.hash, fijoId:undefined};
+  const prodList=ls=>ls.filter(l=>!l.auto&&l.desc).map(l=>`${l.desc} ${(+l.importe||0).toFixed(2).replace(".",",")}`).join("; ").slice(0,450);
+  let items;
+  if (scan.mode==="single"){
+    items=[{...base, id:uid(), importe:total, cat:$("sSingleCat").value, sub:"", notas:prodList(scan.lines)}];
+  } else {
+    const g={}; scan.lines.forEach(l=>{ (g[l.cat] ||= []).push(l); });
+    items=Object.entries(g).map(([cat,ls])=>{ const subs=[...new Set(ls.map(l=>l.sub).filter(Boolean))];
+      return {...base, id:uid(), importe:r2(ls.reduce((s,l)=>s+(+l.importe||0),0)), cat, sub:subs.length===1&&ls.every(l=>l.sub)?subs[0]:"", notas:prodList(ls)}; });
+  }
+  commit({action:"add", items});
+  ui.month=mKey(fecha); closeOv("scanOv");
+  toast(items.length>1?`Ticket guardado: ${eur.format(total)} repartido en ${items.length} categorías`:`Ticket guardado: ${eur.format(total)} en ${items[0].cat}`);
+});
 
 /* ================= Toast ================= */
 let toastT=null, undoFn=null;
@@ -1356,7 +1587,7 @@ function renderMovs(){
   $("movs").innerHTML=Object.entries(groups).map(([fe,arr])=>{
     const d=cap(new Date(fe+"T12:00:00").toLocaleDateString("es-ES",{weekday:"long",day:"numeric",month:"long",year:f.all||useRange?"numeric":undefined}));
     const net=sum(arr.filter(isIn))-sum(arr.filter(isOut));
-    return `<div class="day"><h3><span>${d}</span><span class="num">${net>=0?"+":"−"}${eur.format(Math.abs(net))}</span></h3>${arr.map(i=>`<button class="mov${pend.has(i.id)?" pending":""}" data-id="${esc(i.id)}"><span class="em">${esc(emojiOf(i.cat,i.tipo))}</span><span style="min-width:0"><b>${esc(i.desc||i.cat)}</b><small>${esc(i.cat)}${i.sub?" › "+esc(i.sub):""}${i.fijoId?' · <span class="tag fx">Fijo</span>':""}${i.persona?" · "+esc(i.persona):""}${i.pago?" · "+esc(i.pago):""}${i.notas?" · 📝":""}</small></span><span class="a num ${i.tipo==="ingreso"?"in":""}">${i.tipo==="ingreso"?"+":"−"}${eur.format(i.importe)}</span></button>`).join("")}</div>`;
+    return `<div class="day"><h3><span>${d}</span><span class="num">${net>=0?"+":"−"}${eur.format(Math.abs(net))}</span></h3>${arr.map(i=>`<button class="mov${pend.has(i.id)?" pending":""}" data-id="${esc(i.id)}"><span class="em">${esc(emojiOf(i.cat,i.tipo))}</span><span style="min-width:0"><b>${esc(i.desc||i.cat)}</b><small>${esc(i.cat)}${i.sub?" › "+esc(i.sub):""}${i.fijoId?' · <span class="tag fx">Fijo</span>':""}${i.persona?" · "+esc(i.persona):""}${i.pago?" · "+esc(i.pago):""}${i.notas?" · 📝":""}${i.ticket?" · 🧾":""}</small></span><span class="a num ${i.tipo==="ingreso"?"in":""}">${i.tipo==="ingreso"?"+":"−"}${eur.format(i.importe)}</span></button>`).join("")}</div>`;
   }).join("") + (list.length>600?`<p class="help" style="text-align:center;margin-top:10px">Mostrando 600 de ${list.length}. Usa los filtros para acotar.</p>`:"");
 }
 

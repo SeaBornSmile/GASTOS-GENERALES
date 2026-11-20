@@ -47,6 +47,16 @@ La primera vez, pega la URL `/exec` y la clave. Hay que hacerlo una vez en cada 
 3. **Implementar › Gestionar implementaciones** › lápiz (Editar) › *Versión: Nueva versión* › **Implementar**. La URL `/exec` no cambia.
 4. Abre la app en el móvil con conexión: se actualiza sola. Si ves el aviso «el script de tu hoja es la versión 1», repasa el paso 3.
 
+## Escanear tickets con IA (versión 3)
+
+1. **Actualiza el script**: pega el nuevo `apps-script/Code.gs` (línea 2: «versión 3»), guarda y ejecuta **setup**. Google pedirá permisos nuevos (Drive y conexiones externas): acéptalos.
+2. **Clave de IA**: crea una clave de API en **console.anthropic.com** (Claude) o **platform.openai.com** (ChatGPT) y recarga algo de saldo.
+3. En Apps Script: ⚙️ **Configuración del proyecto › Propiedades del script › Añadir propiedad** → `AI_KEY` = tu clave. El script detecta solo si es de Claude (`sk-ant-…`) o de ChatGPT.
+4. Ejecuta **probarIA**: el registro debe decir «✓ La IA responde correctamente».
+5. **Implementar › Gestionar implementaciones › Editar › Nueva versión › Implementar**.
+
+En la app: botón **+** › **📷 Escanear ticket o factura**. Revisa lo leído, asigna las líneas pendientes y guarda. La foto queda en tu Drive, en la carpeta «Mis gastos · Tickets», enlazada a cada gasto.
+
 ## Cómo funciona
 
 - Cada gasto que apuntas se guarda como una fila en la pestaña **Gastos**. Puedes editar la hoja a mano y la app lo verá al sincronizar.
