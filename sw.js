@@ -1,6 +1,6 @@
 // Service worker de Mis gastos: guarda la app para abrirla sin conexión.
 // Los datos NO pasan por aquí: van directos a Google Apps Script.
-const VERSION = 'mis-gastos-v1';
+const VERSION = 'mis-gastos-v2';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {

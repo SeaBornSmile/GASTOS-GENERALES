@@ -40,6 +40,13 @@ Ya está publicada con GitHub Pages en https://seabornsmile.github.io/GASTOS-GEN
 
 La primera vez, pega la URL `/exec` y la clave. Hay que hacerlo una vez en cada móvil.
 
+## Actualizar a la versión 2 (ingresos, presupuestos por categoría, ahorro…)
+
+1. Abre tu hoja › **Extensiones › Apps Script**, borra el código y pega el nuevo `apps-script/Code.gs`. Guarda.
+2. Elige **setup** › **Ejecutar**. Convierte la pestaña *Gastos* en *Movimientos* y crea *Fijos*, *Categorias* y *Objetivos*, sin perder ningún dato.
+3. **Implementar › Gestionar implementaciones** › lápiz (Editar) › *Versión: Nueva versión* › **Implementar**. La URL `/exec` no cambia.
+4. Abre la app en el móvil con conexión: se actualiza sola. Si ves el aviso «el script de tu hoja es la versión 1», repasa el paso 3.
+
 ## Cómo funciona
 
 - Cada gasto que apuntas se guarda como una fila en la pestaña **Gastos**. Puedes editar la hoja a mano y la app lo verá al sincronizar.
